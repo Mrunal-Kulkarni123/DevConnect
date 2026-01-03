@@ -7,8 +7,6 @@ app.post("/signup", async (req, res) => {
   const user = new User({
     firstName: "Hermione",
     lastName: "Granger",
-    emailId: "Hermione@granger.com",
-    password: "herm123",
     age: 19,
     gender: "female",
   });
