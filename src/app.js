@@ -3,13 +3,15 @@ const { connectDB } = require("./config/database");
 const User = require("./models/user");
 const app = express();
 
+app.use(express.json());
+
 app.post("/signup", async (req, res) => {
   const newUser = new User(req.body);
   try {
     await newUser.save();
     res.send("User saved");
   } catch (err) {
-    console.log("some error");
+    console.log("some error", err);
   }
 });
 
@@ -40,7 +42,9 @@ app.patch("/user", async (req, res) => {
   const userId = req.body.userID;
   const data = req.body;
   try {
-    await User.findByIdAndUpdate({ _id: userId }, data);
+    await User.findByIdAndUpdate({ _id: userId }, data, {
+      runValidators: true,
+    });
     res.send("User updated sucessfully");
   } catch (error) {
     console.log("Something went wrong");
