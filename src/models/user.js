@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const validator = require("validator");
 const userSchema = new mongoose.Schema(
   {
     firstName: {
@@ -14,10 +14,20 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
       trim: true,
+      validate(value) {
+        if (!validator.isEmail(value)) {
+          throw new Error("Invalid Email Address : " + value);
+        }
+      },
     },
     password: {
       type: String,
       required: true,
+      validate(value) {
+        if (!validator.isStrongPassword(value)) {
+          throw new Error("Enter a strong Password");
+        }
+      },
     },
     age: {
       type: Number,
@@ -34,6 +44,11 @@ const userSchema = new mongoose.Schema(
     photoUrl: {
       type: String,
       default: "https://www.reva.edu.in/school-member/dr-arun-mohan-isloor",
+      validate(value) {
+        if (!validator.isURL(value)) {
+          throw new Error("Invalid URL ");
+        }
+      },
     },
     about: {
       type: String,
