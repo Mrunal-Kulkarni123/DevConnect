@@ -1,10 +1,18 @@
+require("dotenv").config({
+  path: require("path").resolve(__dirname, "../.env"),
+});
+
 const express = require("express");
 const { connectDB } = require("./config/database");
 const User = require("./models/user");
 const app = express();
 const { validateSignupData } = require("./utils/validation");
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
+const { userAuth } = require("./middlewares/auth");
 app.use(express.json());
+app.use(cookieParser());
 
 app.post("/signup", async (req, res) => {
   try {
@@ -54,6 +62,12 @@ app.post("/login", async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (isPasswordValid) {
+      //Create a JWT Token
+      const token = await user.getJWT();
+
+      res.cookie("token", token, {
+        expires: new Date(Date.now() + 8 * 3600000),
+      });
       res.send("Login sucessfull!!");
     } else {
       res.send("Invalid Credentials");
@@ -63,52 +77,18 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.get("/feed", async (req, res) => {
+app.get("/profile", userAuth, async (req, res) => {
   try {
-    const users = await User.find();
-    if (users.length === 0) {
-      res.status(404).send("User not found");
-    }
-    res.send(users);
-  } catch (error) {
-    console.log("Something went wrong");
+    const user = req.user;
+    res.send(user);
+  } catch (err) {
+    res.status(400).send("Error: " + err.message);
   }
 });
 
-app.delete("/user", async (req, res) => {
-  const userId = req.body.userID;
-  try {
-    await User.findByIdAndDelete(userId);
-    res.send("User deleted sucessfully");
-  } catch (error) {
-    console.log("Something went wrong", error);
-  }
-});
-
-//update data of the user
-app.patch("/user/:userId", async (req, res) => {
-  const userId = req.params?.userId;
-  const data = req.body;
-
-  try {
-    const ALLOWED_UPDATES = ["photoUrl", "about", "gender", "age", "skills"];
-    const isUpdateAllowed = Object.keys(data).every((k) =>
-      ALLOWED_UPDATES.includes(k)
-    );
-    if (!isUpdateAllowed) {
-      throw new Error("Update not allowed");
-    }
-    if (data.skills.length > 10) {
-      throw new Error("Skills cannot be more than 10");
-    }
-    await User.findByIdAndUpdate({ _id: userId }, data, {
-      runValidators: true,
-    });
-    res.send("User updated sucessfully");
-  } catch (error) {
-    console.log("Something went wrong");
-    res.send(error.message);
-  }
+app.post("/sendConnectionRequest", userAuth, async (req, res) => {
+  console.log("Sending a connection request");
+  res.send("Connection request sent");
 });
 
 connectDB()
