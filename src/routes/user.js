@@ -58,4 +58,33 @@ userRouter.get("/user/connections", userAuth, async (req, res) => {
     res.status(400).send(error.message);
   }
 });
+
+userRouter.get("/user/feed", userAuth, async (req, res) => {
+  const loggedInUser = req.user;
+  const page = parseInt(req.query.page) || 1;
+  let limit = parseInt(req.query.limit) || 10;
+  limit = limit > 50 ? 50 : limit;
+  const skip = (page - 1) * limit;
+  const connectionRequests = await connectionRequestModel
+    .find({
+      $or: [{ fromUserId: loggedInUser._id }, { toUserId: loggedInUser._id }],
+    })
+    .select("fromUserId toUserId");
+
+  const hideUsersFromFeed = new Set();
+  connectionRequests.forEach((request) => {
+    hideUsersFromFeed.add(request.fromUserId.toString());
+    hideUsersFromFeed.add(request.toUserId.toString());
+  });
+  const users = await User.find({
+    $and: [
+      { _id: { $nin: Array.from(hideUsersFromFeed) } },
+      { _id: { $ne: loggedInUser._id } },
+    ],
+  })
+    .select(USER_SAFE_FIELDS)
+    .skip(skip)
+    .limit(limit);
+  res.send(users);
+});
 module.exports = userRouter;
